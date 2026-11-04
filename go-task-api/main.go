@@ -98,8 +98,8 @@ func main() {
 			priorityText := readLine("Priority (1-3): ")
 
 			priority, err := strconv.Atoi(priorityText)
-			if err != nil {
-				fmt.Println("Priority must be a number")
+			if err != nil || priority < 1 || priority > 3 {
+				fmt.Println("Priority must be a number between 1 and 3")
 				continue
 			}
 			tasks = addTask(tasks, nextID, name, priority)
