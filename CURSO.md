@@ -15,8 +15,8 @@ la solución.
 |---|---------|--------|
 | 1 | El valor cero | ✅ Aprobada (2025-11-03) |
 | 2 | `int`, `string` y `bool`; la frontera de `strconv.Atoi` | ✅ Aprobada (2026-11-04) |
-| 3 | Tipo con nombre: `type Priority int` | 🔄 En curso |
-| 4 | Slice o map | Pendiente |
+| 3 | Tipo con nombre: `type Priority int` | ✅ Aprobada (2026-11-07) |
+| 4 | Slice o map | 🔄 En curso |
 | 5 | Devolver el slice o no | Pendiente |
 | 6 | Puntero o valor | Pendiente |
 | 7 | El tipo `error` | Pendiente |
@@ -67,6 +67,25 @@ Nada de esto se adelanta: primero las 10 lecciones.
 - Límite de la lección: la validación en `main` es una costumbre, no una garantía;
   `addTask(..., 99)` sigue compilando. Eso lo resuelve la lección 3.
 
-### Lección 3 — Tipo con nombre (en curso)
+### Lección 3 — Tipo con nombre: `type Priority int`
+
+- `type Priority int` crea un tipo *distinto* de `int`, no un alias. Sirve para dos cosas:
+  dar significado y permitir colgarle métodos (la regla de validación vive pegada al tipo,
+  en un solo sitio testeable, no repartida por `main`).
+- **Lo que el tipo SÍ cierra:** pasar un `int` *variable* donde se espera `Priority` no
+  compila (`cannot use n (variable of type int) as Priority value`). Eso elimina los bugs
+  de mezcla: meter `nextID` en el hueco de la prioridad ya no pasa el compilador.
+- **Lo que el tipo NO cierra:** `addTask(..., 99)` con un *literal* sigue compilando. Un
+  literal es una constante sin tipo y Go la convierte sola a `Priority`. Go **no tiene
+  tipos con rango**: el tipo con nombre no hace irrepresentable el 99.
+- Quien cierra la grieta del 99 no es el tipo, es la *llamada* a `Valid()` — y eso depende
+  de que el que llama se acuerde, igual que en la lección 2. La ganancia real: la regla
+  está centralizada y es testeable, no que el inválido sea imposible.
+- Convención idiomática: un predicado se llama `Valid()` / `IsValid()` (exportado), no
+  `validate()` en minúscula; importará cuando esto sea el paquete `tasks` (lección 10).
+- La conversión en la frontera (`Priority(Atoi(...))`) va *después* de confirmar que el
+  texto era número; convertir basura antes no rompe aquí, pero es al revés.
+
+### Lección 4 — Slice o map (en curso)
 
 *Se completa al aprobar el ejercicio.*

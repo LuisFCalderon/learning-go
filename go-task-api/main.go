@@ -10,11 +10,17 @@ import (
 
 var reader = bufio.NewReader(os.Stdin)
 
+type Priority int
+
 type Task struct {
 	ID       int
 	Name     string
 	Done     bool
-	Priority int
+	Priority Priority
+}
+
+func (p Priority) Validate() bool {
+	return p >= 1 && p <= 3
 }
 
 func (t Task) Describe() string {
@@ -41,7 +47,7 @@ func findTaskIndex(tasks []Task, id int) (int, error) {
 	return -1, fmt.Errorf("No task was found with id: %d", id)
 }
 
-func addTask(tasks []Task, nextId int, name string, priority int) []Task {
+func addTask(tasks []Task, nextId int, name string, priority Priority) []Task {
 	newTask := Task{ID: nextId, Name: name, Priority: priority}
 	return append(tasks, newTask)
 }
@@ -84,6 +90,12 @@ func printMenu() {
 	fmt.Println("5. Exit")
 }
 
+//¿Un tipo con nombre, type Priority int, cierra la grieta de que priority se puede pasar como int?
+//Si, porque podemos usar metodos para validar el rango que buscanmos y evitar que se pase un valor que no sea entre 1 y 3.
+
+//¿para qué sirve darle nombre a un int?
+//Para poder usar extender el tipo int con metodos y funciones, considero que se puede hacer mas robusto darle metodos y funciones a un tipo que ya existe, lo que lo hace mas testiable tambien.
+
 func main() {
 	var tasks []Task
 	nextID := 1
@@ -95,18 +107,24 @@ func main() {
 		switch choice {
 		case "1":
 			name := readLine("Task name: ")
-			priorityText := readLine("Priority (1-3): ")
+			priorityInput := readLine("Priority (1-3): ")
 
-			priority, err := strconv.Atoi(priorityText)
-			if err != nil || priority < 1 || priority > 3 {
+			priorityInt, err := strconv.Atoi(priorityInput)
+			if err != nil {
+				fmt.Println("This is not a valid priority")
+				continue
+			}
+			if !Priority(priorityInt).Validate() {
 				fmt.Println("Priority must be a number between 1 and 3")
 				continue
 			}
+			// Convertimos el int a Priority porque el 4to parametro de addTask es de tipo Priority ademas de que se puede validar el rango de prioridad.
+			//Seria en este punto hacer la conversion a Priority para asi evitamos la falla en la funcion addTask
+			priority := Priority(priorityInt)
+
 			tasks = addTask(tasks, nextID, name, priority)
 			nextID++
-
 			fmt.Printf("Task (%s) added!\n", name)
-
 		case "2":
 			if len(tasks) == 0 {
 				fmt.Println("No task yet")
