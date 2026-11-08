@@ -16,10 +16,10 @@ la solución.
 | 1 | El valor cero | ✅ Aprobada (2025-11-03) |
 | 2 | `int`, `string` y `bool`; la frontera de `strconv.Atoi` | ✅ Aprobada (2026-11-04) |
 | 3 | Tipo con nombre: `type Priority int` | ✅ Aprobada (2026-11-07) |
-| 4 | Slice o map | 🔄 En curso |
-| 5 | Devolver el slice o no | Pendiente |
-| 6 | Puntero o valor | Pendiente |
-| 7 | El tipo `error` | Pendiente |
+| 4 | Slice o map | ✅ Aprobada (2026-11-07) |
+| 5 | Devolver la colección o no (semántica de referencia) | ✅ Aprobada (2026-11-07) |
+| 6 | Puntero o valor | ✅ Aprobada (2026-11-07) |
+| 7 | El tipo `error` | 🔄 En curso |
 | 8 | Paquetes | Pendiente |
 | 9 | Tests de tabla | Pendiente |
 | 10 | La base del proyecto (`internal/config`, `internal/domain`, `cmd/`) | Pendiente |
@@ -86,6 +86,58 @@ Nada de esto se adelanta: primero las 10 lecciones.
 - La conversión en la frontera (`Priority(Atoi(...))`) va *después* de confirmar que el
   texto era número; convertir basura antes no rompe aquí, pero es al revés.
 
-### Lección 4 — Slice o map (en curso)
+### Lección 4 — Slice o map
+
+- **Slice** = secuencia ordenada; bueno para recorrer en orden y acceder por posición.
+  Buscar por una clave (ej. ID) obliga a un barrido lineal O(n).
+- **Map** (`map[int]Task`) = asociación clave→valor; búsqueda, escritura y borrado por
+  clave en O(1). `delete(m, k)` sobre una clave ausente no da error (no-op).
+- **Gotcha de Go:** el orden de recorrido de un map es *aleatorio a propósito* —
+  el runtime lo mezcla en cada ejecución para que nadie dependa del orden por casualidad.
+  Precio del map aquí: se pierde el orden de inserción al listar.
+- Los valores de un map **no son direccionables**: `m[k].Campo = x` no compila. Patrón
+  idiomático: sacar la copia, modificarla y reescribir (`t := m[k]; t.Done = true; m[k] = t`).
+- Detectar "no existe" con el segundo valor de retorno: `v, ok := m[k]`. Base del
+  not-found idiomático, en vez de un barrido que devuelve `-1`.
+- Decisión para esta app: map, por búsqueda/borrado por ID y escalabilidad; el orden no
+  es parte del dominio (se podría ordenar por prioridad al listar si hiciera falta).
+
+### Lección 5 — Devolver la colección o no (semántica de referencia)
+
+- Al pasar un argumento, Go **siempre copia**. Lo que cambia es *qué* se copia.
+- Un **slice** es una cabecera (puntero al arreglo, longitud, capacidad). `append` puede
+  realocar (nueva dirección → cabecera nueva) o cambiar la longitud; en ambos casos la
+  cabecera de `main` queda desfasada, así que **hay que devolver el slice**.
+- Matiz importante: **no todo cambio a un slice obliga a devolver**. Editar un elemento en
+  su sitio (`s[i].Campo = x`) escribe en el arreglo compartido y el llamador lo ve sin
+  retorno. Solo la *cabecera* (realocación o longitud) obliga a devolver.
+- Un **map** también copia su handle al pasarlo, pero el handle apunta a la **misma** tabla
+  hash; no hay longitud/capacidad que recolocar, así que `append`-equivalente no existe y
+  mutar (set/delete/reescribir clave) se ve en el llamador **sin devolver nada**.
+- Por eso las funciones del map no necesitan devolver la colección: `addTask` sin retorno,
+  `markTaskDone`/`deleteTask` devuelven solo `error`.
+- Frase precisa: *se copia la cabecera/handle, nunca los datos a los que apunta; con el
+  slice hay que devolver cuando cambia la cabecera, con el map nunca.*
+
+### Lección 6 — Puntero o valor
+
+- Al pasar un `struct` (o llamar un método con receptor por valor), Go **copia el struct
+  entero**. Receptor por valor = copia; receptor por puntero (`*Task`) = el original.
+- **Valor** cuando el método solo *lee* y el struct es chico (`Describe`, `IsUrgent`).
+  **Puntero** cuando *muta* el original, o el struct es grande y copiar pesa.
+- El receptor es documentación: `func (t *Task) Describe()` le miente al lector — anuncia
+  mutación que no ocurre.
+- Muro clave (ata con lección 4): un método con receptor puntero **no se puede llamar
+  sobre un valor no direccionable** — `tasks[id].MarkDone()` no compila
+  (`cannot call pointer method ... on Task`). El map puede mover/rehashear sus entradas,
+  así que Go prohíbe `&tasks[id]`; sin dirección estable, no hay receptor puntero.
+- Por eso en un map el patrón para mutar es el copy-back (`t := m[k]; t.Done = true;
+  m[k] = t`), no un método puntero.
+- Un receptor por valor se puede llamar sobre *cualquier cosa* (map, literal, copia);
+  ponerle puntero a un lector lo vuelve frágil sin ganar nada.
+- Estilo Go: ser consistente — no mezclar receptores valor y puntero en un mismo tipo sin
+  razón.
+
+### Lección 7 — El tipo `error` (en curso)
 
 *Se completa al aprobar el ejercicio.*
