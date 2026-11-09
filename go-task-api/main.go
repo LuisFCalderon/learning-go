@@ -7,115 +7,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"taskapi/tasks"
 )
 
 var reader = bufio.NewReader(os.Stdin)
-var ErrTaskNotFound = errors.New("Task not found.")
-
-type Priority int
-
-type Task struct {
-	ID       int
-	Name     string
-	Done     bool
-	Priority Priority
-}
-
-func (p Priority) Validate() bool {
-	return p >= 1 && p <= 3
-}
-
-func (t Task) Describe() string {
-	status := "pending"
-
-	if t.Done {
-		status = "done"
-	}
-	return fmt.Sprintf("%d [%s] %s (priority %d)", t.ID, status, t.Name, t.Priority)
-
-}
-
-func (t Task) IsUrgent() bool {
-	return t.Priority >= 3 && !t.Done
-}
-
-/* Nueva apreciacion.
-Entiendo que cuando quiero modificar el task necesito la direccion, por lo que para las metodos Describe e IsUrgent no es necesario el puntero.
-Dado esto seria ideal para estos metodos solo es suficiente con ser receptores por valor
-
-/* func (t *Task, id Int) MarkDone() bool {
-	t.Done = true
-	return t
-}
- C:\Users\calde\OneDrive\Documentos\Learning\learning-go\go-task-api>
-                                                                        go run .
-# taskapi
-.\main.go:91:12: cannot call pointer method MarkDone on Task
-
-Este error pasa porque los maps pueden cambiar de posicion porlo que no tenemos la referencia de la posible ubicacion en memoria del Task, debido a esto diriamos que no sabemos donde esta el original(direccion del original+)
-*/
-
-/* func findTaskIndex(tasks []Task, id int) (int, error) {
-	for i, t := range tasks {
-		if t.ID == id {
-			return i, nil
-		}
-	}
-
-	return -1, fmt.Errorf("No task was found with id: %d", id)
-}
-
-func addTask(tasks []Task, nextId int, name string, priority Priority) []Task {
-	newTask := Task{ID: nextId, Name: name, Priority: priority}
-	return append(tasks, newTask)
-}
-
-func markTaskDone(tasks []Task, id int) ([]Task, error) {
-	index, error := findTaskIndex(tasks, id)
-	if error != nil {
-		return tasks, error
-	}
-
-	tasks[index].Done = true
-	return tasks, nil
-
-}
-
-func deleteTask(tasks []Task, id int) ([]Task, error) {
-
-	index, error := findTaskIndex(tasks, id)
-	if error != nil {
-		return tasks, error
-	}
-
-	append(tasks[:index], tasks[index+1:]...)
-	return tasks, nil
-
-} */
-
-func addTask(tasks map[int]Task, nextID int, name string, priority Priority) {
-	tasks[nextID] = Task{ID: nextID, Name: name, Priority: priority}
-
-}
-
-func markTaskDone(tasks map[int]Task, id int) error {
-	task, exists := tasks[id]
-	if !exists {
-		return fmt.Errorf("task %d: %w", id, ErrTaskNotFound)
-	}
-	task.Done = true
-	tasks[id] = task
-	return nil
-}
-
-func deleteTask(tasks map[int]Task, id int) error {
-	_, exist := tasks[id]
-	if !exist {
-		return fmt.Errorf("task %d: %w", id, ErrTaskNotFound)
-	}
-	delete(tasks, id)
-	return nil
-}
 
 func readLine(prompt string) string {
 	fmt.Print(prompt)
@@ -172,7 +67,7 @@ Asumo que por eso fue pensada asi porque podemos tener tantos errores como funci
 
 func main() {
 	/* var tasks []Task */
-	tasks := map[int]Task{}
+	taskStore := map[int]tasks.Task{}
 
 	nextID := 1
 
@@ -190,24 +85,24 @@ func main() {
 				fmt.Println("This is not a valid priority")
 				continue
 			}
-			if !Priority(priorityInt).Validate() {
+			if !tasks.Priority(priorityInt).Validate() {
 				fmt.Println("Priority must be a number between 1 and 3")
 				continue
 			}
 			// Convertimos el int a Priority porque el 4to parametro de addTask es de tipo Priority ademas de que se puede validar el rango de prioridad.
 			//Seria en este punto hacer la conversion a Priority para asi evitamos la falla en la funcion addTask
-			priority := Priority(priorityInt)
+			priority := tasks.Priority(priorityInt)
 
-			addTask(tasks, nextID, name, priority)
+			tasks.AddTask(taskStore, nextID, name, priority)
 			nextID++
 			fmt.Printf("Task (%s) added!\n", name)
 		case "2":
-			if len(tasks) == 0 {
+			if len(taskStore) == 0 {
 				fmt.Println("No task yet")
 				continue
 			}
 
-			for _, t := range tasks {
+			for _, t := range taskStore {
 				fmt.Println(t.Describe())
 				if t.IsUrgent() {
 					fmt.Println("this one is urgent")
@@ -221,8 +116,8 @@ func main() {
 				fmt.Println("This is not a valid ID")
 				continue
 			}
-			err = markTaskDone(tasks, id)
-			if errors.Is(err, ErrTaskNotFound) {
+			err = tasks.MarkTaskDone(taskStore, id)
+			if errors.Is(err, tasks.ErrTaskNotFound) {
 				fmt.Println("Task not found")
 				continue
 			}
@@ -236,9 +131,9 @@ func main() {
 				continue
 			}
 
-			err = deleteTask(tasks, id)
+			err = tasks.DeleteTask(taskStore, id)
 
-			if errors.Is(err, ErrTaskNotFound) {
+			if errors.Is(err, tasks.ErrTaskNotFound) {
 				fmt.Println("Task not found")
 				continue
 			}

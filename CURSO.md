@@ -20,7 +20,7 @@ la solución.
 | 5 | Devolver la colección o no (semántica de referencia) | ✅ Aprobada (2026-11-07) |
 | 6 | Puntero o valor | ✅ Aprobada (2026-11-07) |
 | 7 | El tipo `error` | ✅ Aprobada (2026-11-08) |
-| 8 | Paquetes | 🔄 En curso |
+| 8 | Paquetes | ✅ Aprobada (2026-11-08) |
 | 9 | Tests de tabla | Pendiente |
 | 10 | La base del proyecto (`internal/config`, `internal/domain`, `cmd/`) | Pendiente |
 
@@ -159,6 +159,26 @@ Nada de esto se adelanta: primero las 10 lecciones.
 - Convención: el string de un error va en minúscula y sin punto final (se concatena al
   envolverlo).
 
-### Lección 8 — Paquetes (en curso)
+### Lección 8 — Paquetes
 
-*Se completa al aprobar el ejercicio.*
+- Un paquete es una **cápsula**: la frontera se decide con una sola cosa, la **mayúscula
+  inicial**. Mayúscula = exportado (parte del contrato público); minúscula = interno (nadie
+  de afuera puede ni escribir su nombre; el compilador lo hace irrepresentable).
+- Dominio (`Task`, `Priority`, `Validate`, `Describe`, `IsUrgent`, `AddTask`,
+  `MarkTaskDone`, `DeleteTask`, `ErrTaskNotFound`) → paquete `tasks/`. Consola (`reader`,
+  `readLine`, `printMenu`, el loop/`switch`) → `main`. El `import` se arma con el nombre del
+  módulo en `go.mod` + la carpeta (`taskapi/tasks`), y se usa como `tasks.Task`, etc.
+- Grieta corregida: **público no es "porque yo lo uso desde afuera"; es "porque el de afuera
+  DEBE poder tocarlo"**. El contraejemplo son los campos de `Task`: están en mayúscula pero
+  `main` nunca toca un campo directamente (solo métodos y funciones), así que podrían ser
+  privados y el programa seguiría compilando.
+- Qué se rompe con campos públicos: cualquiera puede construir `tasks.Task{Priority: 99}` o
+  hacer `t.Done = true` **saltándose** `Validate()` y las puertas del paquete. Campos
+  privados obligan a entrar por `AddTask`/métodos, que es donde vive la validación de las
+  lecciones 2/3/7. Eso es encapsulación de verdad, no solo separar archivos.
+- **Corregido en la misma sesión:** los cuatro campos de `Task` pasaron a privados
+  (`id, name, done, priority`); ahora el único camino para crear/mutar una tarea es
+  `AddTask`/`MarkTaskDone`. También se limpió `ErrTaskNotFound` a minúscula sin punto.
+- Asimetría a recordar: campos privados tampoco se leen desde afuera. Si `main` necesitara un
+  dato crudo, se expone un **método lector** (`func (t Task) Name() string`), nunca se vuelve
+  el campo público.
