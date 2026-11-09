@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 )
 
 var reader = bufio.NewReader(os.Stdin)
+var ErrTaskNotFound = errors.New("Task not found.")
 
 type Priority int
 
@@ -99,7 +101,7 @@ func addTask(tasks map[int]Task, nextID int, name string, priority Priority) {
 func markTaskDone(tasks map[int]Task, id int) error {
 	task, exists := tasks[id]
 	if !exists {
-		return fmt.Errorf("Task with ID %d not found", id)
+		return fmt.Errorf("task %d: %w", id, ErrTaskNotFound)
 	}
 	task.Done = true
 	tasks[id] = task
@@ -109,7 +111,7 @@ func markTaskDone(tasks map[int]Task, id int) error {
 func deleteTask(tasks map[int]Task, id int) error {
 	_, exist := tasks[id]
 	if !exist {
-		return fmt.Errorf("Task with ID: %d not found", id)
+		return fmt.Errorf("task %d: %w", id, ErrTaskNotFound)
 	}
 	delete(tasks, id)
 	return nil
@@ -157,6 +159,14 @@ Me quedaria con el map porque me simplifica muchas cosas y escala mejor
  ¿por qué esto funciona con el map pero habría roto con el slice?
 Mi interpretacion es que cada cambio sobre el slice, de cierta manera genera uno nuevo y el previo a la modificacion siempre es el que esta en flujo que se esta ejecutando por lo que al devolverlo estariamos actualizando la version que esta en el flujo previo. Por eso hay que devolverlo y si no se romperia el flujo que estas corriendo.
 Ademas, entiendo que como funciona go es que con las maps, no genera compia si no un handle que permite alterar el valor del map en el flujo.
+
+
+**************************Excercise 6*****************************
+Error es una interfaz porque podemos extenderla tanto como queramos, porque al final como programadores definimos los errores que tenemos de acuerdo a las funciones y metodos que manejamos.
+Asumo que por eso fue pensada asi porque podemos tener tantos errores como funciones o metodos.
+ ¿cuándo devolverías un error y cuándo harías panic?
+ Panic cuando algo que nunca debe pasar.
+ error para un fallo esperado,contemplado y recuperable
 
 */
 
@@ -212,8 +222,8 @@ func main() {
 				continue
 			}
 			err = markTaskDone(tasks, id)
-			if err != nil {
-				fmt.Println(err)
+			if errors.Is(err, ErrTaskNotFound) {
+				fmt.Println("Task not found")
 				continue
 			}
 			fmt.Println("Task marked as done.")
@@ -228,8 +238,8 @@ func main() {
 
 			err = deleteTask(tasks, id)
 
-			if err != nil {
-				fmt.Println("This is not a valid ID")
+			if errors.Is(err, ErrTaskNotFound) {
+				fmt.Println("Task not found")
 				continue
 			}
 

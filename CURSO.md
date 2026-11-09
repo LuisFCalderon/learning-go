@@ -19,8 +19,8 @@ la solución.
 | 4 | Slice o map | ✅ Aprobada (2026-11-07) |
 | 5 | Devolver la colección o no (semántica de referencia) | ✅ Aprobada (2026-11-07) |
 | 6 | Puntero o valor | ✅ Aprobada (2026-11-07) |
-| 7 | El tipo `error` | 🔄 En curso |
-| 8 | Paquetes | Pendiente |
+| 7 | El tipo `error` | ✅ Aprobada (2026-11-08) |
+| 8 | Paquetes | 🔄 En curso |
 | 9 | Tests de tabla | Pendiente |
 | 10 | La base del proyecto (`internal/config`, `internal/domain`, `cmd/`) | Pendiente |
 
@@ -138,6 +138,27 @@ Nada de esto se adelanta: primero las 10 lecciones.
 - Estilo Go: ser consistente — no mezclar receptores valor y puntero en un mismo tipo sin
   razón.
 
-### Lección 7 — El tipo `error` (en curso)
+### Lección 7 — El tipo `error`
+
+- `error` es una **interfaz**: `type error interface { Error() string }`. Cualquier tipo con
+  `Error() string` es un `error`; por eso el conjunto de errores es abierto y cada paquete
+  define los suyos (con campos/métodos propios) y el llamador los maneja a todos igual.
+- El fallo es un **valor que se devuelve**, no una excepción que se lanza. Go no usa
+  try/catch para esto.
+- **`error`** → fallo esperado, contemplado, recuperable (no existe, no parsea, no está).
+  **`panic`** → algo que nunca debería pasar: bug del programador, invariante roto, estado
+  imposible. El ID que el usuario tecleó mal es `error`, no `panic`.
+- Comparar el *texto* de un error es frágil (mismo error que la lección 2: comparar dibujos,
+  no significados). Se pregunta por **identidad**, no por texto.
+- Patrón: **error centinela** declarado una vez (`var ErrTaskNotFound = errors.New(...)`),
+  devuelto envuelto con `%w` (`fmt.Errorf("id %d: %w", id, ErrTaskNotFound)`), y reconocido
+  con `errors.Is(err, ErrTaskNotFound)`. `%w` conserva el mensaje legible *y* deja que
+  `errors.Is` lo detecte a través de la envoltura.
+- Cada error se chequea donde nace y según su naturaleza: el de `strconv.Atoi` (parseo) con
+  `err != nil`; el del dominio (`markTaskDone`/`deleteTask`) con `errors.Is`. No cruzarlos.
+- Convención: el string de un error va en minúscula y sin punto final (se concatena al
+  envolverlo).
+
+### Lección 8 — Paquetes (en curso)
 
 *Se completa al aprobar el ejercicio.*
